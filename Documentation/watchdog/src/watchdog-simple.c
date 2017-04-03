@@ -12,7 +12,7 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 	while (1) {
-		ret = write(fd, "\0", 1);
+		ret = write(fd, "v", 1);
 		if (ret != 1) {
 			ret = -1;
 			break;
