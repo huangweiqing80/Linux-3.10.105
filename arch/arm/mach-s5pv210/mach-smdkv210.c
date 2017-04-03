@@ -49,11 +49,13 @@
 #include <plat/mfc.h>
 #include <plat/clock.h>
 
+
 /* add by hwq */
 #include <plat/nand-core.h>
 #include <linux/platform_data/mtd-nand-s3c2410.h>
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/mtd.h>
+#include <linux/leds.h>
 
 #include "common.h"
 
@@ -310,6 +312,37 @@ static struct platform_device tq210_beeper = {
 	.id = 1,
 };
 
+/* leds-gpio (add by hwq) */
+static struct gpio_led leds[] = {
+	[0] = {
+		.name = "led0",
+		.default_trigger = "heartbeat",
+		.gpio = S5PV210_GPC0(3),
+		.active_low = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	},
+	
+	[1] = {
+		.name = "led1",
+		.gpio = S5PV210_GPC0(4),
+		.active_low = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
+	},
+};
+
+static struct gpio_led_platform_data tq210_leds_pdata = {
+	.num_leds = ARRAY_SIZE(leds),
+	.leds = leds,
+};
+
+static struct platform_device tq210_leds = {
+	.name = "leds-gpio",
+	.dev = {
+		.platform_data = &tq210_leds_pdata,
+	},
+	.id = -1,
+};
+
 static struct platform_device *smdkv210_devices[] __initdata = {
 	&s3c_device_adc,
 	&s3c_device_cfcon,
@@ -343,6 +376,7 @@ static struct platform_device *smdkv210_devices[] __initdata = {
 	&s3c_device_nand,	/* add by hwq */
 	&s3c_device_timer[1],	/* add by hwq */
 	&tq210_beeper,	/* add by hwq */
+	&tq210_leds,	/* add by hwq */
 };
 
 static void __init smdkv210_dm9000_init(void)
