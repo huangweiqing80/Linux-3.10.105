@@ -365,12 +365,12 @@ static struct i2c_board_info smdkv210_i2c_devs2[] __initdata = {
 
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info smdkv210_bl_gpio_info = {
-	.no = S5PV210_GPD0(3),
+	.no = S5PV210_GPD0(0),  //modied by hwq
 	.func = S3C_GPIO_SFN(2),
 };
 
 static struct platform_pwm_backlight_data smdkv210_bl_data = {
-	.pwm_id = 3,
+	.pwm_id = 0,   //modied by hwq
 	.pwm_period_ns = 1000,
 };
 
