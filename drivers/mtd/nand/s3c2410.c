@@ -82,6 +82,8 @@ enum s3c_cpu_type {
 	TYPE_S3C2410,
 	TYPE_S3C2412,
 	TYPE_S3C2440,
+	/* add by hwq */
+	TYPE_S5PV210,
 };
 
 enum s3c_nand_clk_state {
@@ -283,7 +285,16 @@ static int s3c2410_nand_setrate(struct s3c2410_nand_info *info)
 		set |= S3C2440_NFCONF_TWRPH0(twrph0 - 1);
 		set |= S3C2440_NFCONF_TWRPH1(twrph1 - 1);
 		break;
+		
+	/* add by hwq */
+	case TYPE_S5PV210:
+		mask = (0xF << 12) | (0xF << 8) | (0xF << 4);
 
+		set = (tacls + 1) << 12;
+		set |= (twrph0 - 1 + 1) << 8;
+		set |= (twrph1 - 1 + 1) << 4;
+		break;
+		
 	default:
 		BUG();
 	}
@@ -312,7 +323,8 @@ static int s3c2410_nand_setrate(struct s3c2410_nand_info *info)
 static int s3c2410_nand_inithw(struct s3c2410_nand_info *info)
 {
 	int ret;
-
+	unsigned long uninitialized_var(cfg);	/* add by hwq */
+	
 	ret = s3c2410_nand_setrate(info);
 	if (ret < 0)
 		return ret;
@@ -325,8 +337,19 @@ static int s3c2410_nand_inithw(struct s3c2410_nand_info *info)
 	case TYPE_S3C2440:
 	case TYPE_S3C2412:
 		/* enable the controller and de-assert nFCE */
-
 		writel(S3C2440_NFCONT_ENABLE, info->regs + S3C2440_NFCONT);
+		break;	/* add by hwq */
+		
+	/* add by hwq */
+	case TYPE_S5PV210:
+		cfg = readl(info->regs + S5PV210_NFCONF);
+		cfg &= ~(0x1 << 3);	/* SLC NAND Flash */
+		cfg &= ~(0x1 << 2);	/* 2KBytes/Page */
+		cfg |= (0x1 << 1);	/* 5 address cycle */
+		writel(cfg, info->regs + S5PV210_NFCONF);
+		/* Disable chip select and Enable NAND Flash Controller */
+		writel((0x1 << 1) | (0x1 << 0), info->regs + S5PV210_NFCONT);
+		break;
 	}
 
 	return 0;
@@ -402,6 +425,27 @@ static void s3c2410_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 }
 
 /* command and control functions */
+/* add by hwq */
+static void s5pv210_nand_hwcontrol(struct mtd_info *mtd, int cmd,
+				   unsigned int ctrl)
+{
+	struct s3c2410_nand_info *info = s3c2410_nand_mtd_toinfo(mtd);
+
+	if (cmd == NAND_CMD_NONE)
+		return;
+
+	if (ctrl & NAND_CLE)
+		writeb(cmd, info->regs + S5PV210_NFCMD);
+	else
+		writeb(cmd, info->regs + S5PV210_NFADDR);
+}
+
+/* add by hwq */
+static int s5pv210_nand_devready(struct mtd_info *mtd)
+{
+	struct s3c2410_nand_info *info = s3c2410_nand_mtd_toinfo(mtd);
+	return readb(info->regs + S5PV210_NFSTAT) & 0x1;
+}
 
 static void s3c2440_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 				   unsigned int ctrl)
@@ -795,6 +839,15 @@ static void s3c2410_nand_init_chip(struct s3c2410_nand_info *info,
 			dev_info(info->device, "System booted from NAND\n");
 
 		break;
+	
+	/* add by hwq */
+	case TYPE_S5PV210:
+		chip->IO_ADDR_W = regs + S5PV210_NFDATA;
+		info->sel_reg   = regs + S5PV210_NFCONT;
+		info->sel_bit	= (1 << 1);
+		chip->cmd_ctrl  = s5pv210_nand_hwcontrol;
+		chip->dev_ready = s5pv210_nand_devready;
+		break;
 	}
 
 	chip->IO_ADDR_R = chip->IO_ADDR_W;
@@ -1092,6 +1145,9 @@ static struct platform_device_id s3c24xx_driver_ids[] = {
 	}, {
 		.name		= "s3c6400-nand",
 		.driver_data	= TYPE_S3C2412, /* compatible with 2412 */
+	},{	/* add by hwq */
+		.name		= "s5pv210-nand",
+		.driver_data	= TYPE_S5PV210,
 	},
 	{ }
 };
