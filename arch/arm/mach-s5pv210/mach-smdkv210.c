@@ -300,6 +300,16 @@ static void s5pv210_nand_gpio_cfg(void)
 	iounmap(mp06);
 }
 
+/* PWM Beeper (add by hwq)*/
+static struct platform_device tq210_beeper = {
+	.name = "pwm-beeper",
+	.dev = {
+		.parent = &s3c_device_timer[1].dev,
+		.platform_data = (void *)1,
+	},
+	.id = 1,
+};
+
 static struct platform_device *smdkv210_devices[] __initdata = {
 	&s3c_device_adc,
 	&s3c_device_cfcon,
@@ -331,6 +341,8 @@ static struct platform_device *smdkv210_devices[] __initdata = {
 	&smdkv210_dm9000,
 	&smdkv210_lcd_lte480wv,
 	&s3c_device_nand,	/* add by hwq */
+	&s3c_device_timer[1],	/* add by hwq */
+	&tq210_beeper,	/* add by hwq */
 };
 
 static void __init smdkv210_dm9000_init(void)
@@ -398,6 +410,10 @@ static void __init smdkv210_machine_init(void)
 	s3c_nand_setname("s5pv210-nand");
 	s3c_nand_set_platdata(&smdk_nand_info);
 	s5pv210_nand_gpio_cfg();
+
+	gpio_request(S5PV210_GPD0(1),"beeper");
+	s3c_gpio_cfgpin(S5PV210_GPD0(1),S3C_GPIO_SFN(2));
+	gpio_free(S5PV210_GPD0(1));
 
 	samsung_keypad_set_platdata(&smdkv210_keypad_data);
 	s3c24xx_ts_set_platdata(NULL);
